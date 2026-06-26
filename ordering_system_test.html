@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>香港点心 · 线上点餐</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700;900&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   配置区：上线前改这两行就够了
+   1) SHEET_WEBAPP_URL  填你部署 Apps Script 后拿到的网址
+   2) WHATSAPP_NUMBER   填餐厅 WhatsApp 号码（国码+号码，不要+号、空格）
+   这两个在文件最底部的脚本里，搜 CONFIG 就找到了
+   ============================================================ */
+:root{
+  --ink:#241d18;
+  --ink-soft:#6b5d52;
+  --paper:#faf6ef;
+  --card:#ffffff;
+  --red:#7c1115;
+  --red-deep:#5c0c0f;
+  --gold:#b0863f;
+  --line:#e8dfd1;
+  --shadow:0 1px 2px rgba(60,40,20,.05), 0 8px 24px rgba(60,40,20,.06);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:"Noto Sans SC",system-ui,sans-serif;
+  color:var(--ink);
+  background:var(--paper);
+  -webkit-font-smoothing:antialiased;
+  line-height:1.6;
+  padding-bottom:96px;
+}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+
+/* ---------- 顶栏 ---------- */
+.topbar{
+  position:sticky;top:0;z-index:30;
+  background:rgba(250,246,239,.92);
+  backdrop-filter:saturate(1.2) blur(8px);
+  border-bottom:1px solid var(--line);
+}
+.topbar .wrap{display:flex;align-items:center;justify-content:space-between;height:60px}
+.brand{display:flex;align-items:center;gap:10px;font-family:"Noto Serif SC",serif;font-weight:900;font-size:20px;letter-spacing:.04em}
+.seal{
+  width:34px;height:34px;flex:none;border-radius:6px;
+  background:var(--red);color:#fff;display:grid;place-items:center;
+  font-family:"Noto Serif SC",serif;font-weight:900;font-size:15px;line-height:1;
+}
+.topbar a.call{font-size:14px;color:var(--red);text-decoration:none;font-weight:700;border:1px solid var(--line);padding:8px 14px;border-radius:999px;background:#fff}
+
+/* ---------- Hero ---------- */
+.hero{padding:54px 0 40px;text-align:center;position:relative}
+.hero .eyebrow{font-size:13px;letter-spacing:.32em;color:var(--gold);font-weight:700;margin:0 0 14px}
+.hero h1{
+  font-family:"Noto Serif SC",serif;font-weight:900;
+  font-size:clamp(40px,9vw,64px);line-height:1.05;margin:0;
+  letter-spacing:.06em;color:var(--red-deep);
+}
+.hero .sub{margin:18px auto 0;max-width:30ch;font-size:17px;color:var(--ink-soft)}
+.rule{width:46px;height:3px;background:var(--gold);margin:26px auto 0;border-radius:2px}
+.hero .cta{
+  display:inline-block;margin-top:30px;background:var(--red);color:#fff;
+  font-size:18px;font-weight:700;text-decoration:none;
+  padding:15px 40px;border-radius:999px;box-shadow:var(--shadow);
+}
+.hero .cta:active{transform:translateY(1px)}
+
+/* ---------- 分类 ---------- */
+.cat{padding-top:34px}
+.cat-head{display:flex;align-items:baseline;gap:12px;border-bottom:2px solid var(--ink);padding-bottom:10px;margin-bottom:6px}
+.cat-head h2{font-family:"Noto Serif SC",serif;font-weight:700;font-size:26px;margin:0;letter-spacing:.04em}
+.cat-head .en{font-size:13px;color:var(--ink-soft);letter-spacing:.12em;text-transform:uppercase}
+
+/* ---------- 菜品 ---------- */
+.item{display:flex;gap:16px;align-items:center;padding:18px 0;border-bottom:1px solid var(--line)}
+.thumb{
+  width:84px;height:84px;flex:none;border-radius:12px;overflow:hidden;
+  background:linear-gradient(135deg,#f0e7d8,#e7d9c2);
+  display:grid;place-items:center;text-align:center;
+  font-family:"Noto Serif SC",serif;color:var(--red);font-weight:700;font-size:15px;
+  border:1px solid var(--line);
+}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.item-main{flex:1;min-width:0}
+.item-main .name{font-weight:700;font-size:18px;line-height:1.3}
+.item-main .en{font-size:13px;color:var(--ink-soft);margin-top:2px}
+.item-main .note{font-size:13px;color:var(--ink-soft);margin-top:5px;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+.item-side{flex:none;text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.price{font-weight:700;font-size:19px;color:var(--red-deep);white-space:nowrap}
+.price small{font-size:12px;font-weight:500;color:var(--ink-soft);margin-right:1px}
+
+/* 加 / 减 控件 */
+.add{
+  border:1.5px solid var(--red);color:var(--red);background:#fff;
+  font-size:15px;font-weight:700;padding:9px 18px;border-radius:999px;cursor:pointer;
+}
+.add:active{background:#fbeeee}
+.stepper{display:flex;align-items:center;gap:0;border:1.5px solid var(--red);border-radius:999px;overflow:hidden}
+.stepper button{width:38px;height:38px;border:0;background:#fff;color:var(--red);font-size:22px;line-height:1;cursor:pointer}
+.stepper button:active{background:#fbeeee}
+.stepper .q{min-width:30px;text-align:center;font-weight:700;font-size:17px}
+
+/* ---------- 底部购物车条 ---------- */
+.cartbar{
+  position:fixed;left:0;right:0;bottom:0;z-index:40;
+  background:var(--red);color:#fff;transform:translateY(120%);transition:transform .25s ease;
+  box-shadow:0 -6px 24px rgba(60,20,20,.25);
+}
+.cartbar.show{transform:translateY(0)}
+.cartbar .wrap{display:flex;align-items:center;justify-content:space-between;height:72px}
+.cartbar .info{display:flex;flex-direction:column;line-height:1.25}
+.cartbar .info b{font-size:20px}
+.cartbar .info span{font-size:13px;opacity:.85}
+.cartbar .view{background:#fff;color:var(--red);font-weight:700;font-size:17px;border:0;padding:14px 26px;border-radius:999px;cursor:pointer}
+
+/* ---------- 抽屉 ---------- */
+.overlay{position:fixed;inset:0;background:rgba(30,16,12,.45);z-index:50;opacity:0;pointer-events:none;transition:opacity .25s}
+.overlay.show{opacity:1;pointer-events:auto}
+.drawer{
+  position:fixed;left:0;right:0;bottom:0;z-index:60;background:var(--paper);
+  border-radius:20px 20px 0 0;max-height:90vh;overflow-y:auto;
+  transform:translateY(100%);transition:transform .3s cubic-bezier(.2,.7,.2,1);
+}
+.drawer.show{transform:translateY(0)}
+.drawer .wrap{padding-top:8px;padding-bottom:32px}
+.drawer .grip{width:44px;height:5px;border-radius:3px;background:#d8ccbb;margin:10px auto 4px}
+.drawer h3{font-family:"Noto Serif SC",serif;font-size:24px;margin:14px 0 4px}
+.line{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--line)}
+.line .l-name{font-weight:700;font-size:16px}
+.line .l-unit{font-size:13px;color:var(--ink-soft)}
+.line .l-right{display:flex;align-items:center;gap:14px}
+.line .l-sub{font-weight:700;color:var(--red-deep);min-width:64px;text-align:right}
+.mini{display:flex;align-items:center;gap:0;border:1px solid var(--line);border-radius:999px;background:#fff}
+.mini button{width:32px;height:32px;border:0;background:transparent;color:var(--red);font-size:19px;cursor:pointer}
+.mini .q{min-width:24px;text-align:center;font-weight:700}
+.total{display:flex;justify-content:space-between;align-items:baseline;padding:18px 0 6px;font-size:18px}
+.total b{font-family:"Noto Serif SC",serif;font-size:28px;color:var(--red-deep)}
+
+.field{margin-top:14px}
+.field label{display:block;font-size:14px;font-weight:700;margin-bottom:6px}
+.field input,.field textarea{
+  width:100%;font-size:17px;font-family:inherit;color:var(--ink);
+  padding:13px 14px;border:1.5px solid var(--line);border-radius:12px;background:#fff;
+}
+.field input:focus,.field textarea:focus{outline:none;border-color:var(--red)}
+.field textarea{resize:vertical;min-height:62px}
+.required:after{content:" *";color:var(--red)}
+
+.submit{
+  width:100%;margin-top:22px;background:var(--red);color:#fff;border:0;
+  font-size:19px;font-weight:700;padding:17px;border-radius:14px;cursor:pointer;box-shadow:var(--shadow);
+}
+.submit:active{transform:translateY(1px)}
+.submit:disabled{opacity:.6;cursor:default}
+.wa{
+  width:100%;margin-top:10px;background:#fff;color:#128c43;border:1.5px solid #128c43;
+  font-size:16px;font-weight:700;padding:14px;border-radius:14px;cursor:pointer;
+}
+.hint{font-size:13px;color:var(--ink-soft);text-align:center;margin-top:12px}
+
+/* 成功 */
+.done{text-align:center;padding:24px 0 8px}
+.done .check{width:64px;height:64px;border-radius:50%;background:#1a7a3c;color:#fff;display:grid;place-items:center;font-size:34px;margin:0 auto 16px}
+.done h3{margin:0 0 6px}
+.done p{color:var(--ink-soft);margin:0 0 22px}
+
+/* ---------- 信息区 ---------- */
+.info-sec{margin-top:48px;padding:34px 0;border-top:1px solid var(--line)}
+.info-sec h2{font-family:"Noto Serif SC",serif;font-size:22px;margin:0 0 14px}
+.branch{padding:14px 0;border-bottom:1px solid var(--line)}
+.branch b{font-size:16px}
+.branch .addr{font-size:14px;color:var(--ink-soft);margin:3px 0 8px}
+.branch a{font-size:14px;color:var(--red);text-decoration:none;font-weight:700}
+.contact{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px}
+.contact a{flex:1;min-width:140px;text-align:center;text-decoration:none;font-weight:700;padding:14px;border-radius:12px;font-size:16px}
+.contact .c-wa{background:#128c43;color:#fff}
+.contact .c-tel{background:#fff;color:var(--red);border:1.5px solid var(--red)}
+footer{text-align:center;color:var(--ink-soft);font-size:13px;padding:30px 0 10px}
+.empty{color:var(--ink-soft);text-align:center;padding:30px 0}
+
+/* ---------- 影片 ---------- */
+.video-grid{display:grid;grid-template-columns:1fr;gap:18px;margin-top:6px}
+@media(min-width:560px){.video-grid{grid-template-columns:1fr 1fr}}
+.video{position:relative;width:100%;aspect-ratio:16/9;border-radius:14px;overflow:hidden;background:#000;border:1px solid var(--line)}
+.video iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.video.ph{background:linear-gradient(135deg,#f0e7d8,#e7d9c2);display:grid;place-items:center;color:var(--red);font-family:"Noto Serif SC",serif;font-weight:700}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="wrap">
+    <div class="brand"><span class="seal">点</span>香港点心</div>
+    <a class="call" href="#contact">联络我们</a>
+  </div>
+</div>
+
+<header class="hero">
+  <div class="wrap">
+    <p class="eyebrow">手 工 现 蒸 · 港 式 点 心</p>
+    <h1>香港点心</h1>
+    <p class="sub">一盅两件，蒸笼里的地道港味。线上点餐，到店即取。</p>
+    <div class="rule"></div>
+    <a class="cta" href="#menu">立即点餐</a>
+  </div>
+</header>
+
+<main class="wrap" id="menu"></main>
+
+<section class="info-sec wrap" id="locations">
+  <h2>分店地址</h2>
+  <div class="branch">
+    <b>总店</b>
+    <div class="addr">请在这里填上总店地址</div>
+    <a href="https://maps.app.goo.gl/V79neGaxTh7AxDn56" target="_blank" rel="noopener">在 Google 地图打开 ›</a>
+  </div>
+  <div class="branch">
+    <b>分店一</b>
+    <div class="addr">请在这里填上分店地址</div>
+    <a href="https://maps.app.goo.gl/V79neGaxTh7AxDn56" target="_blank" rel="noopener">在 Google 地图打开 ›</a>
+  </div>
+</section>
+
+<section class="info-sec wrap" id="videos">
+  <h2>影片</h2>
+  <div class="video-grid" id="videoGrid"></div>
+</section>
+
+<section class="info-sec wrap" id="contact">
+  <h2>联络我们</h2>
+  <div class="contact">
+    <a class="c-wa" id="waContact" href="#" target="_blank" rel="noopener">WhatsApp 联系</a>
+    <a class="c-tel" href="tel:+0000000000">致电订位</a>
+  </div>
+  <footer>© 香港点心 · 手工港式点心</footer>
+</section>
+
+<!-- 底部购物车条 -->
+<div class="cartbar" id="cartbar">
+  <div class="wrap">
+    <div class="info"><b id="cartTotal">$0</b><span id="cartCount">0 件</span></div>
+    <button class="view" id="viewCart">查看购物车</button>
+  </div>
+</div>
+
+<!-- 抽屉 -->
+<div class="overlay" id="overlay"></div>
+<div class="drawer" id="drawer">
+  <div class="grip"></div>
+  <div class="wrap" id="drawerBody"></div>
+</div>
+
+<script>
+/* ============================================================
+   CONFIG  ——  上线前只需改这两行
+   ============================================================ */
+const SHEET_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzFxYuCYrHrBYsmbC7evLruRBh8vrW7HwRx-g8aVzNQPxSzqcys6e9wYi7mgBQJH1VslA/exec";          // ← 填部署 Apps Script 后的网址 (https://script.google.com/macros/s/..../exec)
+const WHATSAPP_NUMBER  = "60123456789"; // ← 填餐厅 WhatsApp 号码，国码+号码，例如马来西亚 60123456789
+const CURRENCY = "RM";                  // ← 货币符号，可改成 "RM" 或 "HK$"
+const VIDEOS = ["_E_jv9o_oEQ", "fYmW3bzifxY"];                     // ← 填 YouTube 视频 ID（链接里 v= 后面那串），例如 ["dQw4w9WgXcQ","abc123XYZ"]
+/* ============================================================ */
+
+// 菜单（来自你的表格，可自行增删改）
+const MENU = [
+  {cat:"蒸点", en:"Steamed", items:[
+    {zh:"晶莹鲜虾饺", en:"Steamed Shrimp Dumplings (Har Gow)", price:42, note:"点心之王，皮薄透亮", img:"food.png"},
+    {zh:"蟹籽烧卖皇", en:"Steamed Pork & Shrimp Dumplings (Siu Mai)", price:38, note:"鲜猪肉搭配整只鲜虾", img:"food.png"},
+    {zh:"豉汁蒸排骨", en:"Steamed Pork Ribs with Black Bean Sauce", price:36, note:"惹味蒜香与豆豉香", img:""},
+    {zh:"酱汁蒸凤爪", en:"Steamed Chicken Claws in Abalone Sauce", price:35, note:"软糯入味，入口即化", img:""},
+    {zh:"蚝皇叉烧包", en:"Steamed BBQ Pork Buns (Cha Siu Bao)", price:32, note:"经典爆口叉烧包", img:""},
+    {zh:"潮州蒸粉果", en:"Steamed Chiu Chow Style Dumplings", price:28, note:"内含花生、韭菜、沙葛，口感丰富", img:""},
+  ]},
+  {cat:"肠粉", en:"Rice Rolls", items:[
+    {zh:"韭黄鲜虾肠", en:"Steamed Rice Rolls with Shrimp & Chives", price:45, note:"最受欢迎的肠粉款式", img:""},
+    {zh:"蜜汁叉烧肠", en:"Steamed Rice Rolls with BBQ Pork", price:38, note:"咸甜适中", img:""},
+    {zh:"免治牛肉肠", en:"Steamed Rice Rolls with Minced Beef", price:36, note:"肉质嫩滑", img:""},
+    {zh:"金沙海鲜炸两", en:"Steamed Rice Rolls stuffed with Fried Dough (Zha Liang)", price:34, note:"肠粉包油条，滑脆交织", img:""},
+  ]},
+  {cat:"煎炸烘烤", en:"Pan-fried & Baked", items:[
+    {zh:"酥皮叉烧包", en:"Baked BBQ Pork Buns with Crisp Crust", price:38, note:"新派港式点心代表，外酥内热", img:""},
+    {zh:"香煎萝卜糕", en:"Pan-fried Radish Cake", price:30, note:"能吃到丝丝萝卜清甜与腊味香", img:""},
+    {zh:"明火韭黄春卷", en:"Deep-fried Spring Rolls with Chives & Shrimp", price:32, note:"酥脆外皮包裹鲜虾", img:""},
+    {zh:"安虾咸水角", en:"Deep-fried Glutinous Rice Dumplings", price:28, note:"外皮甜糯酥脆，内馅咸香", img:""},
+    {zh:"蜂巢香芋角", en:"Deep-fried Taro Dumplings", price:35, note:"考验厨师功底的蜂巢外壳", img:""},
+  ]},
+];
+
+// 给每个菜品一个稳定 id
+let _id=0;
+MENU.forEach(c=>c.items.forEach(it=>it.id="p"+(_id++)));
+const byId = {};
+MENU.forEach(c=>c.items.forEach(it=>byId[it.id]=it));
+
+const cart = {}; // {id: qty}
+const money = n => CURRENCY + n;
+
+/* ---------- 渲染菜单 ---------- */
+const menuEl = document.getElementById("menu");
+MENU.forEach(c=>{
+  const sec=document.createElement("section");
+  sec.className="cat";
+  sec.innerHTML=`<div class="cat-head"><h2>${c.cat}</h2><span class="en">${c.en}</span></div>`;
+  c.items.forEach(it=>{
+    const row=document.createElement("div");
+    row.className="item";
+    const thumb = it.img
+      ? `<div class="thumb"><img src="${it.img}" alt="${it.zh}"></div>`
+      : `<div class="thumb">${it.zh.slice(0,2)}</div>`;
+    row.innerHTML=`
+      ${thumb}
+      <div class="item-main">
+        <div class="name">${it.zh}</div>
+        <div class="en">${it.en}</div>
+        <div class="note">${it.note}</div>
+      </div>
+      <div class="item-side">
+        <div class="price"><small>${CURRENCY}</small>${it.price}</div>
+        <div class="ctrl" data-id="${it.id}"></div>
+      </div>`;
+    sec.appendChild(row);
+    renderCtrl(row.querySelector(".ctrl"), it.id);
+  });
+  menuEl.appendChild(sec);
+});
+
+function renderCtrl(el, id){
+  const q = cart[id]||0;
+  if(q===0){
+    el.innerHTML=`<button class="add">加入</button>`;
+    el.querySelector(".add").onclick=()=>{ setQty(id,1); };
+  }else{
+    el.innerHTML=`<div class="stepper"><button class="m">−</button><span class="q">${q}</span><button class="p">+</button></div>`;
+    el.querySelector(".m").onclick=()=>setQty(id,q-1);
+    el.querySelector(".p").onclick=()=>setQty(id,q+1);
+  }
+}
+
+function setQty(id,q){
+  if(q<=0) delete cart[id]; else cart[id]=q;
+  // 重渲染该菜品控件
+  document.querySelectorAll(`.ctrl[data-id="${id}"]`).forEach(el=>renderCtrl(el,id));
+  updateBar();
+  if(document.getElementById("drawer").classList.contains("show")) renderCart();
+}
+
+/* ---------- 底部条 ---------- */
+function totals(){
+  let count=0,sum=0;
+  for(const id in cart){count+=cart[id];sum+=cart[id]*byId[id].price;}
+  return {count,sum};
+}
+function updateBar(){
+  const {count,sum}=totals();
+  const bar=document.getElementById("cartbar");
+  bar.classList.toggle("show", count>0);
+  document.getElementById("cartTotal").textContent=money(sum);
+  document.getElementById("cartCount").textContent=count+" 件";
+}
+
+/* ---------- 抽屉 ---------- */
+const overlay=document.getElementById("overlay");
+const drawer=document.getElementById("drawer");
+function openDrawer(){ overlay.classList.add("show"); drawer.classList.add("show"); renderCart(); }
+function closeDrawer(){ overlay.classList.remove("show"); drawer.classList.remove("show"); }
+document.getElementById("viewCart").onclick=openDrawer;
+overlay.onclick=closeDrawer;
+
+function renderCart(){
+  const body=document.getElementById("drawerBody");
+  const {count,sum}=totals();
+  if(count===0){
+    body.innerHTML=`<h3>购物车</h3><p class="empty">还没有选购，回去挑几样吧。</p>`;
+    return;
+  }
+  let lines="";
+  for(const id in cart){
+    const it=byId[id], q=cart[id];
+    lines+=`<div class="line">
+      <div><div class="l-name">${it.zh}</div><div class="l-unit">${money(it.price)} / 份</div></div>
+      <div class="l-right">
+        <div class="mini"><button onclick="setQty('${id}',${q-1})">−</button><span class="q">${q}</span><button onclick="setQty('${id}',${q+1})">+</button></div>
+        <div class="l-sub">${money(it.price*q)}</div>
+      </div>
+    </div>`;
+  }
+  body.innerHTML=`
+    <h3>购物车</h3>
+    ${lines}
+    <div class="total"><span>合计</span><b>${money(sum)}</b></div>
+    <div class="field"><label class="required">称呼</label><input id="fName" placeholder="怎么称呼您" autocomplete="name"></div>
+    <div class="field"><label class="required">电话</label><input id="fPhone" type="tel" inputmode="tel" placeholder="方便联系的号码" autocomplete="tel"></div>
+    <div class="field"><label>取餐时间</label><input id="fTime" placeholder="例如：今天 6:30pm 自取"></div>
+    <div class="field"><label>备注</label><textarea id="fNote" placeholder="少辣、不要香菜等"></textarea></div>
+    <button class="submit" id="placeOrder">确认下单</button>
+    <button class="wa" id="placeWa">改用 WhatsApp 发送订单</button>
+    <p class="hint">下单后订单会自动记录给餐厅，我们会尽快联系您确认。</p>`;
+  document.getElementById("placeOrder").onclick=placeOrder;
+  document.getElementById("placeWa").onclick=sendViaWhatsApp;
+}
+
+/* ---------- 组装订单 ---------- */
+function buildOrder(){
+  const name=(document.getElementById("fName").value||"").trim();
+  const phone=(document.getElementById("fPhone").value||"").trim();
+  const time=(document.getElementById("fTime").value||"").trim();
+  const note=(document.getElementById("fNote").value||"").trim();
+  const items=[];
+  for(const id in cart){
+    const it=byId[id];
+    items.push({zh:it.zh, en:it.en, cat:catOf(id), qty:cart[id], price:it.price, subtotal:it.price*cart[id]});
+  }
+  const {sum}=totals();
+  const orderId = "D"+Date.now().toString().slice(-6);
+  return {orderId, name, phone, time, note, items, total:sum};
+}
+function catOf(id){ for(const c of MENU){ if(c.items.some(i=>i.id===id)) return c.cat; } return ""; }
+
+/* ---------- 提交到 Google Sheet ---------- */
+async function placeOrder(){
+  const name=(document.getElementById("fName").value||"").trim();
+  const phone=(document.getElementById("fPhone").value||"").trim();
+  if(!name||!phone){ alert("请填写称呼和电话，方便我们联系您。"); return; }
+
+  const order=buildOrder();
+  const btn=document.getElementById("placeOrder");
+  btn.disabled=true; btn.textContent="提交中…";
+
+  if(!SHEET_WEBAPP_URL){
+    // 还没配置表格地址时，退回 WhatsApp，保证订单不丢
+    btn.disabled=false; btn.textContent="确认下单";
+    alert("尚未连接表格，先用 WhatsApp 发送订单。");
+    sendViaWhatsApp();
+    return;
+  }
+
+  try{
+    await fetch(SHEET_WEBAPP_URL, {
+      method:"POST",
+      mode:"no-cors",                 // Apps Script 不返回跨域头，用 no-cors 发完即可，不读回应
+      headers:{"Content-Type":"text/plain;charset=utf-8"},
+      body:JSON.stringify(order),
+    });
+    showDone(order);
+  }catch(e){
+    btn.disabled=false; btn.textContent="确认下单";
+    alert("网络不稳，订单未送出。可改用下方 WhatsApp 发送。");
+  }
+}
+
+function showDone(order){
+  document.getElementById("drawerBody").innerHTML=`
+    <div class="done">
+      <div class="check">✓</div>
+      <h3>已收到您的订单</h3>
+      <p>订单号 ${order.orderId} · 合计 ${money(order.total)}<br>我们会尽快联系您确认。</p>
+      <button class="submit" id="alsoWa">也发一份到 WhatsApp</button>
+      <button class="wa" id="closeDone">完成</button>
+    </div>`;
+  document.getElementById("alsoWa").onclick=()=>openWhatsApp(order);
+  document.getElementById("closeDone").onclick=()=>{
+    for(const id in cart) delete cart[id];
+    document.querySelectorAll(".ctrl").forEach(el=>renderCtrl(el, el.dataset.id));
+    updateBar(); closeDrawer();
+  };
+}
+
+/* ---------- WhatsApp 兜底 ---------- */
+function sendViaWhatsApp(){
+  const name=(document.getElementById("fName").value||"").trim();
+  const phone=(document.getElementById("fPhone").value||"").trim();
+  if(!name||!phone){ alert("请填写称呼和电话。"); return; }
+  openWhatsApp(buildOrder());
+}
+function openWhatsApp(order){
+  let lines=order.items.map(i=>`· ${i.zh} ×${i.qty} = ${money(i.subtotal)}`).join("\n");
+  const text=
+`【香港点心 线上订单】
+订单号：${order.orderId}
+称呼：${order.name}
+电话：${order.phone}
+取餐：${order.time||"未填"}
+备注：${order.note||"无"}
+————
+${lines}
+合计：${money(order.total)}`;
+  window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=`+encodeURIComponent(text),"_blank");
+}
+
+// 联络区 WhatsApp 链接
+document.getElementById("waContact").href=`https://wa.me/${WHATSAPP_NUMBER}`;
+
+// 影片：填了 ID 就嵌入 YouTube，没填就显示占位
+(function renderVideos(){
+  const grid=document.getElementById("videoGrid");
+  if(!VIDEOS.length){
+    grid.innerHTML=`<div class="video ph">影片即将上线</div><div class="video ph">影片即将上线</div>`;
+    return;
+  }
+  grid.innerHTML=VIDEOS.map(id=>
+    `<div class="video"><iframe src="https://www.youtube.com/embed/${id}" title="香港点心影片" loading="lazy" allowfullscreen></iframe></div>`
+  ).join("");
+})();
+
+updateBar();
+</script>
+</body>
+</html>
